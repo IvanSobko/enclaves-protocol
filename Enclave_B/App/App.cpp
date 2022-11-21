@@ -191,37 +191,57 @@ int SGX_CDECL main(int argc, char *argv[])
 
 
     sgx_status_t sgx_status;
-
+    /***********************************************
+     * 2. BEGIN: Enclave B: generate key pair
+     ***********************************************/
     sgx_ec256_public_t public_key;
     sgx_status_t enclv_status = create_key_pair(global_eid, &sgx_status, &public_key);
     if (!check_status(sgx_status, enclv_status, "Public key creation")) {
         return -1;
     }
-
+    /***********************************************
+     * 2. END: Enclave B: generate key pair
+     ***********************************************/
 
     //https://www.geeksforgeeks.org/named-pipe-fifo-example-c-program/
     mkfifo(fifo_pipe, 0666);
 
+    /***********************************************
+     * 1. BEGIN: Enclave B: receive public key from Enclave A and send key to Enclave A
+     ***********************************************/
     sgx_ec256_public_t public_key_A;
     read_from_pipe(&public_key_A, SGX_ECP256_KEY_SIZE * 2);
     printf("From App: Read public key of A.\n");
 
     write_to_pipe(&public_key, SGX_ECP256_KEY_SIZE * 2);
     printf("From App: Sent public key to A.\n");
+    /***********************************************
+     * 1. END: Enclave B: receive public key from Enclave A and send key to Enclave A
+     ***********************************************/
 
-
+    /***********************************************
+     * 3. BEGIN: Enclave B: calculate shared secret key
+     ***********************************************/
     enclv_status = compute_shared_dhkey(global_eid, &sgx_status, &public_key_A);
     if (!check_status(sgx_status, enclv_status, "Shared key computation")) {
         return -1;
     }
+    /***********************************************
+     * 3. END: Enclave B: calculate shared secret key
+     ***********************************************/
 
+
+    /***********************************************
+     * 1. BEGIN: Enclave B: receive and decrypt PSK from Enclave A,
+     *                      then encrypt and send PSK to Enclave A
+     *                      
+     ***********************************************/
     uint8_t encrypted_msg[11];
     read_from_pipe(&encrypted_msg, sizeof(encrypted_msg));
     enclv_status = decrypt_and_check_message_psk(global_eid, &sgx_status, encrypted_msg);
     if (!check_status(sgx_status, enclv_status, "Enclave A message decryption")) {
         return -1;
     }
-
 
     uint8_t msg[11];
     enclv_status = encrypt_message_psk(global_eid, &sgx_status, msg);
@@ -230,7 +250,16 @@ int SGX_CDECL main(int argc, char *argv[])
     }
 
     write_to_pipe(&msg, sizeof(msg));
+    /***********************************************
+     * 1. END: Enclave B: receive and decrypt PSK from Enclave A,
+     *                      then encrypt and send PSK to Enclave A
+     *                      
+     ***********************************************/
 
+
+    /***********************************************
+     * 6. BEGIN: Enclave B: receive and decrypt the challenge from Enclave A
+     ***********************************************/
     uint8_t challenge[2];
     read_from_pipe(&challenge, sizeof(challenge));
 
@@ -238,8 +267,13 @@ int SGX_CDECL main(int argc, char *argv[])
     if (!check_status(sgx_status, enclv_status, "Challenge receive")) {
         return -1;
     }
+    /***********************************************
+     * 6. END: Enclave B: receive and decrypt the challenge from Enclave A
+     ***********************************************/
 
-
+    /***********************************************
+     * 6. BEGIN: Enclave B: compute, ecnrypt and send completed challenge to Enclave A
+     ***********************************************/
     uint8_t response[3];
     enclv_status = complete_and_send_challenge(global_eid, &sgx_status, response);
     if (!check_status(sgx_status, enclv_status, "Challenge compute and send")) {
@@ -247,7 +281,9 @@ int SGX_CDECL main(int argc, char *argv[])
     }
 
     write_to_pipe(&response, sizeof(response));
-
+    /***********************************************
+     * 6. End: Enclave B: compute, ecnrypt and send completed challenge to Enclave A
+     ***********************************************/
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);
