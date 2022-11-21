@@ -98,7 +98,7 @@ sgx_status_t get_challenge(uint8_t *result)
     sgx_read_rand(&challenge_a, 1);
     sgx_read_rand(&challenge_b, 1);
 
-    printf("Generated challenge: %i, %i.\n", challenge_a, challenge_b);
+    printf("From Enclave A: generated challenge: %i, %i.\n", challenge_a, challenge_b);
 
     uint8_t buff[2];
     uint8_t *ptr = (uint8_t*) &buff;

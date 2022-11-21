@@ -149,20 +149,21 @@ void ocall_print_string(const char *str)
 }
 
 
-bool check_status(sgx_status_t sgx, sgx_status_t enclv) {
+bool check_status(sgx_status_t sgx, sgx_status_t enclv, const char *msg) {
     if (sgx == SGX_SUCCESS && enclv == SGX_SUCCESS) {
+        printf("From App: %s OK.\n", msg);
         return true;
     } else {
         print_error_message(sgx);
         print_error_message(enclv);
+
+        printf("From App: %s FAILED.\n", msg);
+        sgx_destroy_enclave(global_eid);
         return false;
     }
 }
 
 
-
-
-/* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
     (void)(argc);
@@ -175,23 +176,11 @@ int SGX_CDECL main(int argc, char *argv[])
     printf("From App: Enclave creation success. \n");
     printf("From App: Write your protocol here ... \n");
 
-    /*
-        TODO:
-        1. generate public key
-        2. send public key to B
-        3. receive public key from B
-        4. compute shared key
-        5. send PSK using shared key to B
-        6. receive PSK from B and check if its correct
-    */
     sgx_status_t sgx_status;
 
     sgx_ec256_public_t public_key;
     sgx_status_t enclv_status = create_key_pair(global_eid, &sgx_status, &public_key);
-    if (check_status(sgx_status, enclv_status)) {
-        printf("Public key creation OK.\n");
-    } else {
-        printf("Error: Public key creation FAILED.\n");
+    if (!check_status(sgx_status, enclv_status, "Public key creation")) {
         return -1;
     }
 
@@ -205,7 +194,7 @@ int SGX_CDECL main(int argc, char *argv[])
     write(fd, public_key.gy, SGX_ECP256_KEY_SIZE);
 
     close(fd);
-    printf("Sent public key to B.\n");
+    printf("From App: Sent public key to B.\n");
 
     fd = open(fifo_pipe, O_RDONLY);
 
@@ -214,23 +203,17 @@ int SGX_CDECL main(int argc, char *argv[])
     read(fd, public_key_B.gy, SGX_ECP256_KEY_SIZE);
 
     close(fd);
-    printf("Read public key of B.\n");
+    printf("From App: Read public key of B.\n");
 
 
     enclv_status = compute_shared_dhkey(global_eid, &sgx_status, &public_key_B);
-    if (check_status(sgx_status, enclv_status)) {
-        printf("Shared key computation OK.\n");
-    } else {
-        printf("Error: Shared key computation FAILED.\n");
+    if (!check_status(sgx_status, enclv_status, "Shared key computation")) {
         return -1;
     }
 
     uint8_t msg[11];
     enclv_status = encrypt_message_psk(global_eid, &sgx_status, msg);
-    if (check_status(sgx_status, enclv_status)) {
-        printf("Message encryption OK.\n");
-    } else {
-        printf("Error: Message encryption FAILED.\n");
+    if (!check_status(sgx_status, enclv_status, "Message encryption")) {
         return -1;
     }
 
@@ -245,19 +228,13 @@ int SGX_CDECL main(int argc, char *argv[])
     close(fd);
 
     enclv_status = decrypt_and_check_message_psk(global_eid, &sgx_status, encrypted_msg);
-    if (check_status(sgx_status, enclv_status)) {
-        printf("Message decryption OK.\n");
-    } else {
-        printf("Error: Message decryption FAILED.\n");
+    if (!check_status(sgx_status, enclv_status, "Message decryption")) {
         return -1;
     }
 
     uint8_t challenge[2];
     enclv_status = get_challenge(global_eid, &sgx_status, challenge);
-    if (check_status(sgx_status, enclv_status)) {
-        printf("Challenge generation OK.\n");
-    } else {
-        printf("Error: Challenge generation FAILED.\n");
+    if (!check_status(sgx_status, enclv_status, "Challenge generation")) {
         return -1;
     }
 
@@ -271,17 +248,11 @@ int SGX_CDECL main(int argc, char *argv[])
     read(fd, &challenge_result, sizeof(challenge_result));
     close(fd);
     enclv_status = check_challenge_result(global_eid, &sgx_status, challenge_result);
-    if (check_status(sgx_status, enclv_status)) {
-        printf("Challenge result OK.\n");
-    } else {
-        printf("Error: Challenge result FAILED.\n");
+    if (!check_status(sgx_status, enclv_status, "Challenge result")) {
         return -1;
     }
 
-
-    /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);
-
     printf("From App: Enclave destroyed.\n");
     return 0;
 }
