@@ -16,6 +16,8 @@
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
 
+const char *fifo_pipe = "/tmp/enclave_pipe";
+
 #define SGX_ECP256_KEY_SIZE 32
 
 typedef struct _sgx_errlist_t {
@@ -163,6 +165,21 @@ bool check_status(sgx_status_t sgx, sgx_status_t enclv, const char *msg) {
     }
 }
 
+//https://www.geeksforgeeks.org/named-pipe-fifo-example-c-program/
+void read_from_pipe(void *buf, size_t count)
+{
+    fd = open(fifo_pipe, O_RDONLY);
+    read(fd, buf, count);
+    close(fd);
+}
+
+void write_to_pipe(const void *buf, size_t count)
+{
+    fd = open(fifo_pipe, O_WRONLY);
+    write(fd, buf, count);
+    close(fd);
+}
+
 
 int SGX_CDECL main(int argc, char *argv[])
 {
@@ -174,7 +191,6 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1;
     }
     printf("From App: Enclave creation success. \n");
-    printf("From App: Write your protocol here ... \n");
 
     sgx_status_t sgx_status;
 
@@ -183,10 +199,7 @@ int SGX_CDECL main(int argc, char *argv[])
     if (!check_status(sgx_status, enclv_status, "Public key creation")) {
         return -1;
     }
-
-
-    //https://www.geeksforgeeks.org/named-pipe-fifo-example-c-program/
-    const char *fifo_pipe = "/tmp/enclave_pipe";
+    
     mkfifo(fifo_pipe, 0666);
     int fd = open(fifo_pipe, O_WRONLY);
 
@@ -217,15 +230,18 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1;
     }
 
-    fd = open(fifo_pipe, O_WRONLY);
-    write(fd, &msg, sizeof(msg));
-    close(fd);
+    write_to_pipe(&msg, sizeof(msg));
+    // fd = open(fifo_pipe, O_WRONLY);
+    // write(fd, &msg, sizeof(msg));
+    // close(fd);
 
 
-    fd = open(fifo_pipe, O_RDONLY);
+    // fd = open(fifo_pipe, O_RDONLY);
     uint8_t encrypted_msg[11];
-    read(fd, &encrypted_msg, sizeof(encrypted_msg));
-    close(fd);
+    read_from_pipe(&encrypted_msg, sizeof(encrypted_msg));
+
+    // read(fd, &encrypted_msg, sizeof(encrypted_msg));
+    // close(fd);
 
     enclv_status = decrypt_and_check_message_psk(global_eid, &sgx_status, encrypted_msg);
     if (!check_status(sgx_status, enclv_status, "Message decryption")) {

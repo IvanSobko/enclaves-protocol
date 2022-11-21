@@ -118,7 +118,7 @@ sgx_status_t check_challenge_result(uint8_t *result)
 
     int expected_value = (int)challenge_a + (int)challenge_b;
     int actual_value = *(int *)buff;
-
+    printf("From Enclave A: received challenge result: %i.\n", actual_value);
     if (expected_value != actual_value) {
         printf("From Enclave A: numbers dont match: %i vs %i.\n", expected_value, actual_value);
         status = SGX_ERROR_INVALID_PARAMETER;
