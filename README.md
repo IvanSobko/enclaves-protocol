@@ -21,13 +21,15 @@ the encrypted PSK, and the encrypted challenges/responses.
 7. The point where enclave E<sub>b</sub> computes and encrypts the response.
 
 Using the following format:
+```
 /***********************************************
  * 1. BEGIN: Enclave A: send public key to B and receive key from B
 ***********************************************/
 <code here>
 /***********************************************
- * 1. END:Enclave A: send public key to B and receive key from B
+ * 1. END: Enclave A: send public key to B and receive key from B
  ***********************************************/
+ ```
 
   
   This repo was done in context of System Security course assignment at ETH Zurich.
