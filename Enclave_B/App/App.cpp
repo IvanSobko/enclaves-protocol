@@ -174,16 +174,6 @@ int SGX_CDECL main(int argc, char *argv[])
 
     sgx_status_t sgx_status;
 
-    /*
-        TODO:
-        1. generate public key
-        2. receive public key from A
-        3. send public key to A
-        4. compute shared key
-        5. receive PSK from A and check if its correct
-        6. send PSK using shared key to A
-    */
-
     sgx_ec256_public_t public_key;
     sgx_status_t enclv_status = create_key_pair(global_eid, &sgx_status, &public_key);
     if (check_status(sgx_status, enclv_status)) {
@@ -260,14 +250,28 @@ int SGX_CDECL main(int argc, char *argv[])
     close(fd);
 
     enclv_status = receive_challenge(global_eid, &sgx_status, challenge);
-        if (check_status(sgx_status, enclv_status)) {
+    if (check_status(sgx_status, enclv_status)) {
         printf("Challenge receive OK.\n");
     } else {
         printf("Error: Challenge receive FAILED.\n");
         return -1;
     }
 
-    enclv_status = complete_and_send_challenge(global_eid, &sgx_status);
+
+
+
+    uint8_t response[3];
+    enclv_status = complete_and_send_challenge(global_eid, &sgx_status, response);
+    if (check_status(sgx_status, enclv_status)) {
+        printf("Challenge compute and send OK.\n");
+    } else {
+        printf("Error: Challenge compute and send FAILED.\n");
+        return -1;
+    }
+
+    fd = open(fifo_pipe, O_WRONLY);
+    write(fd, &response, sizeof(response));
+    close(fd);
 
 
     /* Destroy the enclave */

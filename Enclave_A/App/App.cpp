@@ -266,17 +266,17 @@ int SGX_CDECL main(int argc, char *argv[])
     close(fd);
 
 
-//     fd = open(fifo_pipe, O_RDONLY);
-//     uint8_t response[2];
-//     read(fd, &response, sizeof(response));
-//     close(fd);
-//     enclv_status = check_challenge_result(global_eid, &sgx_status, response);
-//     if (check_status(sgx_status, enclv_status)) {
-//         printf("Challenge result OK.\n");
-//     } else {
-//         printf("Error: Challenge result FAILED.\n");
-//         return -1;
-//     }
+    fd = open(fifo_pipe, O_RDONLY);
+    uint8_t challenge_result[3];
+    read(fd, &challenge_result, sizeof(challenge_result));
+    close(fd);
+    enclv_status = check_challenge_result(global_eid, &sgx_status, challenge_result);
+    if (check_status(sgx_status, enclv_status)) {
+        printf("Challenge result OK.\n");
+    } else {
+        printf("Error: Challenge result FAILED.\n");
+        return -1;
+    }
 
 
     /* Destroy the enclave */

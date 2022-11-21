@@ -113,10 +113,8 @@ sgx_status_t get_challenge(uint8_t *result)
 
 sgx_status_t check_challenge_result(uint8_t *result)
 {
-    uint8_t buff[2];
-    uint8_t *ptr = (uint8_t *) &buff;
-
-    sgx_status_t status = sgx_aes_ctr_decrypt(&encl_secret_key, result, sizeof(buff), IV, 1, ptr);
+    uint8_t buff[3];
+    sgx_status_t status = sgx_aes_ctr_decrypt(&encl_secret_key, result, sizeof(buff), IV, 1, (uint8_t *)buff);
 
     int expected_value = (int)challenge_a + (int)challenge_b;
     int actual_value = *(int *)buff;

@@ -48,7 +48,7 @@ enclave {
       public sgx_status_t encrypt_message_psk([out, size = 11] uint8_t* result);
       public sgx_status_t decrypt_and_check_message_psk([in, size = 11] uint8_t* encrypted_msg);
       public sgx_status_t get_challenge([out , size = 2] uint8_t *result);
-      public sgx_status_t check_challenge_result([in, size = 2] uint8_t *response);
+      public sgx_status_t check_challenge_result([in, size = 3] uint8_t *response);
     };
     /*
      * ocall_print_string - invokes OCALL to display string buffer inside the enclave.

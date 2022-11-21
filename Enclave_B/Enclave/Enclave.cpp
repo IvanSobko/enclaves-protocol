@@ -92,10 +92,17 @@ sgx_status_t receive_challenge(uint8_t *encrypted_challenge)
     return sgx_aes_ctr_decrypt(&enclv_secret_key, encrypted_challenge, 2, IV, 1, challenge);
 }
 
-sgx_status_t complete_and_send_challenge(/*uint8_t *response*/)
+sgx_status_t complete_and_send_challenge(uint8_t *response)
 {
-    printf("Challenge: %i, %i.\n", challenge[0], challenge[1]);
-    return SGX_SUCCESS;
+    int challenge_result = (int)challenge[0] + (int)challenge[1];
+    uint8_t buff[3];
+
+    buff[2] = (uint8_t)(challenge_result >> 16) & 0xff;
+    buff[1] = (uint8_t)(challenge_result >> 8) & 0xff;
+    buff[0] = (uint8_t)challenge_result & 0xff;
+
+    sgx_status_t status = sgx_aes_ctr_encrypt(&enclv_secret_key, buff, sizeof(buff), IV, 1, response);
+    return status;
 }
 
 sgx_status_t printSecret()
