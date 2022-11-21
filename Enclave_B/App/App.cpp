@@ -162,6 +162,20 @@ bool check_status(sgx_status_t sgx, sgx_status_t enclv, const char *msg) {
     }
 }
 
+//https://www.geeksforgeeks.org/named-pipe-fifo-example-c-program/
+void read_from_pipe(void *buf, size_t count)
+{
+    int fd = open(fifo_pipe, O_RDONLY);
+    read(fd, buf, count);
+    close(fd);
+}
+
+void write_to_pipe(const void *buf, size_t count)
+{
+    int fd = open(fifo_pipe, O_WRONLY);
+    write(fd, buf, count);
+    close(fd);
+}
 
 int SGX_CDECL main(int argc, char *argv[])
 {
@@ -188,22 +202,11 @@ int SGX_CDECL main(int argc, char *argv[])
     const char *fifo_pipe = "/tmp/enclave_pipe";
     mkfifo(fifo_pipe, 0666);
 
-    int fd = open(fifo_pipe, O_RDONLY);
-
     sgx_ec256_public_t public_key_A;
-    read(fd, public_key_A.gx, SGX_ECP256_KEY_SIZE);
-    read(fd, public_key_A.gy, SGX_ECP256_KEY_SIZE);
-
-    close(fd);
+    read_from_pipe(&public_key_A, SGX_ECP256_KEY_SIZE * 2)
     printf("From App: Read public key of A.\n");
 
-
-    fd = open(fifo_pipe, O_WRONLY);
-
-    write(fd, public_key.gx, SGX_ECP256_KEY_SIZE);
-    write(fd, public_key.gy, SGX_ECP256_KEY_SIZE);
-
-    close(fd);
+    write_to_pipe(&public_key, SGX_ECP256_KEY_SIZE * 2);
     printf("From App: Sent public key to A.\n");
 
 
@@ -212,10 +215,8 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1;
     }
 
-    fd = open(fifo_pipe, O_RDONLY);
     uint8_t encrypted_msg[11];
-    read(fd, &encrypted_msg, sizeof(encrypted_msg));
-    close(fd);
+    read_from_pipe(&encrypted_msg, sizeof(encrypted_msg));
     enclv_status = decrypt_and_check_message_psk(global_eid, &sgx_status, encrypted_msg);
     if (!check_status(sgx_status, enclv_status, "Enclave A message decryption")) {
         return -1;
@@ -228,15 +229,10 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1;
     }
 
-    fd = open(fifo_pipe, O_WRONLY);
-    write(fd, &msg, sizeof(msg));
-    close(fd);
+    write_to_pipe(&msg, sizeof(msg));
 
-
-    fd = open(fifo_pipe, O_RDONLY);
     uint8_t challenge[2];
-    read(fd, &challenge, sizeof(challenge));
-    close(fd);
+    read_from_pipe(&challenge, sizeof(challenge));
 
     enclv_status = receive_challenge(global_eid, &sgx_status, challenge);
     if (!check_status(sgx_status, enclv_status, "Challenge receive")) {
@@ -250,9 +246,7 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1;
     }
 
-    fd = open(fifo_pipe, O_WRONLY);
-    write(fd, &response, sizeof(response));
-    close(fd);
+    write_to_pipe(&response, sizeof(response));
 
 
     /* Destroy the enclave */

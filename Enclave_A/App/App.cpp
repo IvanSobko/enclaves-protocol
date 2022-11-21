@@ -168,14 +168,14 @@ bool check_status(sgx_status_t sgx, sgx_status_t enclv, const char *msg) {
 //https://www.geeksforgeeks.org/named-pipe-fifo-example-c-program/
 void read_from_pipe(void *buf, size_t count)
 {
-    fd = open(fifo_pipe, O_RDONLY);
+    int fd = open(fifo_pipe, O_RDONLY);
     read(fd, buf, count);
     close(fd);
 }
 
 void write_to_pipe(const void *buf, size_t count)
 {
-    fd = open(fifo_pipe, O_WRONLY);
+    int fd = open(fifo_pipe, O_WRONLY);
     write(fd, buf, count);
     close(fd);
 }
@@ -199,23 +199,15 @@ int SGX_CDECL main(int argc, char *argv[])
     if (!check_status(sgx_status, enclv_status, "Public key creation")) {
         return -1;
     }
-    
+
     mkfifo(fifo_pipe, 0666);
-    int fd = open(fifo_pipe, O_WRONLY);
 
-    write(fd, public_key.gx, SGX_ECP256_KEY_SIZE);
-    write(fd, public_key.gy, SGX_ECP256_KEY_SIZE);
-
-    close(fd);
+    write_to_pipe(&public_key, SGX_ECP256_KEY_SIZE * 2);
     printf("From App: Sent public key to B.\n");
 
-    fd = open(fifo_pipe, O_RDONLY);
 
     sgx_ec256_public_t public_key_B;
-    read(fd, public_key_B.gx, SGX_ECP256_KEY_SIZE);
-    read(fd, public_key_B.gy, SGX_ECP256_KEY_SIZE);
-
-    close(fd);
+    read_from_pipe(&public_key_B, SGX_ECP256_KEY_SIZE * 2)
     printf("From App: Read public key of B.\n");
 
 
@@ -229,20 +221,11 @@ int SGX_CDECL main(int argc, char *argv[])
     if (!check_status(sgx_status, enclv_status, "Message encryption")) {
         return -1;
     }
-
     write_to_pipe(&msg, sizeof(msg));
-    // fd = open(fifo_pipe, O_WRONLY);
-    // write(fd, &msg, sizeof(msg));
-    // close(fd);
 
 
-    // fd = open(fifo_pipe, O_RDONLY);
     uint8_t encrypted_msg[11];
     read_from_pipe(&encrypted_msg, sizeof(encrypted_msg));
-
-    // read(fd, &encrypted_msg, sizeof(encrypted_msg));
-    // close(fd);
-
     enclv_status = decrypt_and_check_message_psk(global_eid, &sgx_status, encrypted_msg);
     if (!check_status(sgx_status, enclv_status, "Message decryption")) {
         return -1;
@@ -253,16 +236,10 @@ int SGX_CDECL main(int argc, char *argv[])
     if (!check_status(sgx_status, enclv_status, "Challenge generation")) {
         return -1;
     }
+    write_to_pipe(&challenge, sizeof(challenge));
 
-    fd = open(fifo_pipe, O_WRONLY);
-    write(fd, &challenge, sizeof(challenge));
-    close(fd);
-
-
-    fd = open(fifo_pipe, O_RDONLY);
     uint8_t challenge_result[3];
-    read(fd, &challenge_result, sizeof(challenge_result));
-    close(fd);
+    read_from_pipe(&challenge_result, sizeof(challenge_result));
     enclv_status = check_challenge_result(global_eid, &sgx_status, challenge_result);
     if (!check_status(sgx_status, enclv_status, "Challenge result")) {
         return -1;
