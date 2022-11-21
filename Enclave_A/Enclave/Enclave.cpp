@@ -70,12 +70,7 @@ sgx_status_t encrypt_message_psk(uint8_t* result)
 {
     char PSK_A[] = "I AM ALICE";
     uint32_t length = sizeof(PSK_A);
-    uint8_t *psk_allocated = (uint8_t *)malloc(length);
-    memcpy(psk_allocated, PSK_A, length);
-
-    sgx_status_t status = sgx_aes_ctr_encrypt(&encl_secret_key, psk_allocated, length, IV, 1, result);
-
-    free(psk_allocated);
+    sgx_status_t status = sgx_aes_ctr_encrypt(&encl_secret_key, (uint8_t *)PSK_A, length, IV, 1, result);
     return status;
 }
 
@@ -84,19 +79,17 @@ sgx_status_t decrypt_and_check_message_psk(uint8_t* encrypted_msg)
 
     char PSK_B[] = "I AM BOBOB";
     uint32_t length = sizeof(PSK_B);
-    uint8_t *decrypted_message = (uint8_t *)malloc(length);
+    uint8_t decrypted_message[length];
     sgx_status_t status = sgx_aes_ctr_decrypt(&encl_secret_key, encrypted_msg, length, IV, 1, decrypted_message);
     if (status != SGX_SUCCESS) {
         return status;
     }
-
 
     if (strcmp((char *)decrypted_message, PSK_B) != 0) {
         status = SGX_ERROR_INVALID_PARAMETER;
     }
 
     printf("From Enclave A: received message is: %s.\n", (char *)decrypted_message);
-    free(decrypted_message);
     return status;
 }
 
