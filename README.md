@@ -6,4 +6,4 @@ two enclaves E<sub>a</sub> and E<sub>b</sub>. A<sub>a</sub> communicates the out
 The communication between A<sub>a</sub> and A<sub>b</sub> implemented using a named pipe.
 
 The protocol between these two pairs of enclaves and applications can be described as:
-![Protocol figure](https://github.com/IvanSobko/sgx-enclaves-protocol/blob/master/protocol-figure.png?raw=true)
+![Protocol figure](https://github.com/IvanSobko/sgx-enclaves-protocol/blob/master/protocol-figure.png?raw=true width=50% height=50%)
