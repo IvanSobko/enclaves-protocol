@@ -15,6 +15,7 @@
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
+const char *fifo_pipe = "/tmp/enclave_pipe";
 
 #define SGX_ECP256_KEY_SIZE 32
 
@@ -199,11 +200,10 @@ int SGX_CDECL main(int argc, char *argv[])
 
 
     //https://www.geeksforgeeks.org/named-pipe-fifo-example-c-program/
-    const char *fifo_pipe = "/tmp/enclave_pipe";
     mkfifo(fifo_pipe, 0666);
 
     sgx_ec256_public_t public_key_A;
-    read_from_pipe(&public_key_A, SGX_ECP256_KEY_SIZE * 2)
+    read_from_pipe(&public_key_A, SGX_ECP256_KEY_SIZE * 2);
     printf("From App: Read public key of A.\n");
 
     write_to_pipe(&public_key, SGX_ECP256_KEY_SIZE * 2);

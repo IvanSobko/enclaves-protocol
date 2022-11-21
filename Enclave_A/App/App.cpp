@@ -207,7 +207,7 @@ int SGX_CDECL main(int argc, char *argv[])
 
 
     sgx_ec256_public_t public_key_B;
-    read_from_pipe(&public_key_B, SGX_ECP256_KEY_SIZE * 2)
+    read_from_pipe(&public_key_B, SGX_ECP256_KEY_SIZE * 2);
     printf("From App: Read public key of B.\n");
 
 
