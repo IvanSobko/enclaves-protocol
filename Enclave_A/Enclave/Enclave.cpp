@@ -98,7 +98,7 @@ sgx_status_t get_challenge(uint8_t *result)
     sgx_read_rand(&challenge_a, 1);
     sgx_read_rand(&challenge_b, 1);
 
-    printf("From Enclave A: generated challenge: %i, %i.\n", challenge_a, challenge_b);
+//     printf("From Enclave A: generated challenge: %i, %i.\n", challenge_a, challenge_b);
 
     uint8_t buff[2];
     uint8_t *ptr = (uint8_t*) &buff;
@@ -118,7 +118,7 @@ sgx_status_t check_challenge_result(uint8_t *result)
 
     int expected_value = (int)challenge_a + (int)challenge_b;
     int actual_value = *(int *)buff;
-    printf("From Enclave A: received challenge result: %i.\n", actual_value);
+//     printf("From Enclave A: received challenge result: %i.\n", actual_value);
     if (expected_value != actual_value) {
         printf("From Enclave A: numbers dont match: %i vs %i.\n", expected_value, actual_value);
         status = SGX_ERROR_INVALID_PARAMETER;

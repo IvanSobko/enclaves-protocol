@@ -149,15 +149,20 @@ void ocall_print_string(const char *str)
     printf("%s", str);
 }
 
-bool check_status(sgx_status_t sgx, sgx_status_t enclv, const char *msg) {
+
+bool check_status(sgx_status_t sgx, sgx_status_t enclv, const char *msg = NULL) {
     if (sgx == SGX_SUCCESS && enclv == SGX_SUCCESS) {
-        printf("From App: %s OK.\n", msg);
+        if (msg) {
+            printf("From App: %s OK.\n", msg);
+        }
         return true;
     } else {
         print_error_message(sgx);
         print_error_message(enclv);
 
-        printf("From App: %s FAILED.\n", msg);
+        if (msg) {
+            printf("From App: %s FAILED.\n", msg);
+        }
         sgx_destroy_enclave(global_eid);
         return false;
     }
@@ -256,34 +261,40 @@ int SGX_CDECL main(int argc, char *argv[])
      *                      
      ***********************************************/
 
+    //repeat n times to ensure the correctness of the result
+    const int repeatChallengeCount = 20;
+    for (int i = 0; i < repeatChallengeCount; i++) {
+        /***********************************************
+        * 6. BEGIN: Enclave B: receive and decrypt the challenge from Enclave A
+        ***********************************************/
+        uint8_t challenge[2];
+        read_from_pipe(&challenge, sizeof(challenge));
 
-    /***********************************************
-     * 6. BEGIN: Enclave B: receive and decrypt the challenge from Enclave A
-     ***********************************************/
-    uint8_t challenge[2];
-    read_from_pipe(&challenge, sizeof(challenge));
+        enclv_status = receive_challenge(global_eid, &sgx_status, challenge);
+        char log[30];
+        sprintf(log, "Challenge %i receive", i + 1);
+        if (!check_status(sgx_status, enclv_status, log)) {
+            return -1;
+        }
+        /***********************************************
+        * 6. END: Enclave B: receive and decrypt the challenge from Enclave A
+        ***********************************************/
 
-    enclv_status = receive_challenge(global_eid, &sgx_status, challenge);
-    if (!check_status(sgx_status, enclv_status, "Challenge receive")) {
-        return -1;
+        /***********************************************
+        * 6. BEGIN: Enclave B: compute, ecnrypt and send completed challenge to Enclave A
+        ***********************************************/
+        uint8_t response[3];
+        enclv_status = complete_and_send_challenge(global_eid, &sgx_status, response);
+        sprintf(log, "Challenge %i compute and send", i + 1);
+        if (!check_status(sgx_status, enclv_status, log)) {
+            return -1;
+        }
+
+        write_to_pipe(&response, sizeof(response));
+        /***********************************************
+        * 6. End: Enclave B: compute, ecnrypt and send completed challenge to Enclave A
+        ***********************************************/
     }
-    /***********************************************
-     * 6. END: Enclave B: receive and decrypt the challenge from Enclave A
-     ***********************************************/
-
-    /***********************************************
-     * 6. BEGIN: Enclave B: compute, ecnrypt and send completed challenge to Enclave A
-     ***********************************************/
-    uint8_t response[3];
-    enclv_status = complete_and_send_challenge(global_eid, &sgx_status, response);
-    if (!check_status(sgx_status, enclv_status, "Challenge compute and send")) {
-        return -1;
-    }
-
-    write_to_pipe(&response, sizeof(response));
-    /***********************************************
-     * 6. End: Enclave B: compute, ecnrypt and send completed challenge to Enclave A
-     ***********************************************/
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);
